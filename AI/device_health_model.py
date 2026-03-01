@@ -1,53 +1,40 @@
-
 import pandas as pd
+import numpy as np
+import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.ensemble import RandomForestClassifier
-import joblib
+from sklearn.metrics import accuracy_score
 
-# 1️⃣ Load Dataset
+# LOAD DATASET
 df = pd.read_csv("Laptop_Motherboard_Health_Monitoring_Dataset.csv")
 
-# 2️⃣ Drop unnecessary column
-df = df.drop("ModelName", axis=1)
-
-# 3️⃣ Encode target column
+# Encode target
 le = LabelEncoder()
 df["ProblemDetected"] = le.fit_transform(df["ProblemDetected"])
 
-# 4️⃣ Define Features & Target
 X = df.drop("ProblemDetected", axis=1)
 y = df["ProblemDetected"]
 
-# 5️⃣ Train-Test Split
+# Scaling
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Train Test Split
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
+    X_scaled, y, test_size=0.2, random_state=42, stratify=y
 )
 
-# 6️⃣ Scale Features
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
-
-# 7️⃣ Train Model
-model = RandomForestClassifier(n_estimators=200, random_state=42)
+# Model
+model = RandomForestClassifier(n_estimators=600, random_state=42)
 model.fit(X_train, y_train)
 
-# 8️⃣ Save Files (.pkl)
+accuracy = accuracy_score(y_test, model.predict(X_test))
+print("🔥 Final Accuracy:", accuracy)
+
+# Save files
 joblib.dump(model, "device_health_model.pkl")
 joblib.dump(scaler, "scaler.pkl")
 joblib.dump(le, "label_encoder.pkl")
 
-print("✅ Model trained and .pkl files created successfully!")
-
-# Accuracy
-
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-
-
-y_pred = model.predict(X_test)
-
-accuracy = accuracy_score(y_test, y_pred)
-print(f"\n Model Accuracy: {accuracy:.4f}")
-print("\n Classification Report:")
-print(classification_report(y_test, y_pred, target_names=le.classes_))
+print("✅ Model + Scaler + Encoder Saved Successfully!")
