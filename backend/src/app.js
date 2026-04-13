@@ -6,6 +6,8 @@ import { login } from "./auth/auth.controller.js"
 import { listEmployees } from "./employees/employees.service.js";
 import { listAssets } from "./assets/assets.service.js";
 import { postPresenceEvent } from "./presence/presence.controller.js";
+import { postOfficeLocation } from "./presence/presence.controller.js";
+
 
 import {
   getEmployeeByEuidController,
@@ -39,6 +41,7 @@ app.get("/employees/:euid/assets", getEmployeeAssets)
 app.get("/employees/:euid/attendance", getEmployeeAttendance)
 
 app.post("/presence", postPresenceEvent);
+app.post("/locations/office", postOfficeLocation);
 
 
 app.get("/reports/summary", async (req, res) => {

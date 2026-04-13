@@ -18,6 +18,10 @@ export function DashboardOverview() {
   const [assetCount, setAssetCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // ✅ NEW STATE (office location)
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationMessage, setLocationMessage] = useState<string | null>(null);
+
   useEffect(() => {
     Promise.all([fetchEmployees(), fetchAssets()])
       .then(([employees, assets]) => {
@@ -30,12 +34,83 @@ export function DashboardOverview() {
       .finally(() => setLoading(false));
   }, []);
 
+  // ✅ NEW FUNCTION (set office location)
+  async function handleSetOfficeLocation() {
+    if (!navigator.geolocation) {
+      setLocationMessage("Geolocation not supported");
+      return;
+    }
+
+    setLocationLoading(true);
+    setLocationMessage(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const res = await fetch(
+            `${import.meta.env.VITE_API_BASE_URL}/locations/office`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+              }),
+            }
+          );
+
+          const data = await res.json();
+
+          if (data.success) {
+            setLocationMessage("✅ Office location updated successfully");
+          } else {
+            setLocationMessage("❌ Failed to update location");
+          }
+        } catch (err) {
+          console.error(err);
+          setLocationMessage("❌ Error updating location");
+        } finally {
+          setLocationLoading(false);
+        }
+      },
+      (error) => {
+        console.error(error);
+        setLocationLoading(false);
+        setLocationMessage("❌ Location permission denied");
+      }
+    );
+  }
+
   if (loading) {
     return <div className="p-8">Loading dashboard...</div>;
   }
 
   return (
     <div className="p-8 space-y-6">
+
+      {/* ✅ NEW SECTION: Office Configuration */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Office Configuration
+        </h3>
+
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleSetOfficeLocation}
+            disabled={locationLoading}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            {locationLoading ? "Setting Location..." : "Set Office Location"}
+          </button>
+
+          {locationMessage && (
+            <span className="text-sm text-gray-700">{locationMessage}</span>
+          )}
+        </div>
+      </div>
+
       {/* Attendance Stats */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -110,7 +185,7 @@ export function DashboardOverview() {
         </div>
       </div>
 
-      {/* Recent Activity (Keep Mock For Now) */}
+      {/* Recent Activity */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Recent Activity

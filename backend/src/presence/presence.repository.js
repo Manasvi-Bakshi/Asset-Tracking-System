@@ -126,6 +126,37 @@ export async function updateAttendanceEntry(record_id, entry_time) {
     `,
     [entry_time, record_id]
   );
-  
+
   return rows[0];
+}
+
+// ✅ FIXED VERSION (NO ON CONFLICT)
+export async function upsertOfficeLocation({ latitude, longitude }) {
+  // Step 1: Try updating existing office
+  const updateResult = await pool.query(
+    `
+    UPDATE locations
+    SET latitude = $1,
+        longitude = $2
+    WHERE is_office = true
+    RETURNING *
+    `,
+    [latitude, longitude]
+  );
+
+  if (updateResult.rows.length > 0) {
+    return updateResult.rows[0];
+  }
+
+  // Step 2: If no office exists, insert new one
+  const insertResult = await pool.query(
+    `
+    INSERT INTO locations (latitude, longitude, is_office, location_name)
+    VALUES ($1, $2, true, 'Main Office')
+    RETURNING *
+    `,
+    [latitude, longitude]
+  );
+
+  return insertResult.rows[0];
 }

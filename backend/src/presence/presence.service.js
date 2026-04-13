@@ -9,6 +9,7 @@ import {
   updateAttendanceEntry,
   getEventDateIST
 } from "./presence.repository.js";
+import { upsertOfficeLocation } from "./presence.repository.js";
 
 // --- CONFIG ---
 const DEFAULT_RADIUS_METERS = 100;
@@ -133,4 +134,21 @@ export async function processPresenceEvent(data) {
   } finally {
     client.release();
   }
+}
+
+
+
+export async function setOfficeLocation(data) {
+  const { latitude, longitude } = data;
+
+  if (!latitude || !longitude) {
+    throw new Error("Invalid coordinates");
+  }
+
+  const location = await upsertOfficeLocation({ latitude, longitude });
+
+  return {
+    message: "Office location updated",
+    data: location,
+  };
 }
