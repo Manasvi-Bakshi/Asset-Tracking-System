@@ -51,3 +51,52 @@ export async function insertEmployeesBulk(rows) {
 
   return inserted;
 }
+
+export async function insertAssetsBulk(rows) {
+  const inserted = [];
+
+  for (const row of rows) {
+    const asset_code = String(row.asset_code || "").trim();
+    const asset_type = String(row.asset_type || "").trim();
+    const company = String(row.company || "").trim();
+    const model = String(row.model || "").trim();
+    const serial_number = String(row.serial_number || "").trim();
+    const status = String(row.status || "AVAILABLE").trim();
+
+    try {
+      const { rows: result } = await pool.query(
+        `
+        INSERT INTO assets (
+          id,
+          asset_code,
+          asset_type,
+          company,
+          model,
+          serial_number,
+          status
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (asset_code) DO NOTHING
+        RETURNING *
+        `,
+        [
+          uuidv4(),
+          asset_code,
+          asset_type || null,
+          company || null,
+          model || null,
+          serial_number || null,
+          status || "AVAILABLE",
+        ]
+      );
+
+      if (result.length > 0) {
+        inserted.push(result[0]);
+      }
+    } catch (err) {
+      console.error("Asset insert error:", err);
+    }
+  }
+
+  return inserted;
+}

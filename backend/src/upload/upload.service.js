@@ -1,5 +1,5 @@
+import { insertAssetsBulk } from "./upload.repository.js";
 import xlsx from "xlsx";
-import { insertEmployeesBulk } from "./upload.repository.js";
 
 export async function processExcelFile(file) {
   const workbook = xlsx.read(file.buffer, { type: "buffer" });
@@ -13,25 +13,48 @@ export async function processExcelFile(file) {
     throw new Error("Empty file");
   }
 
+  // 🔥 Detect type based on columns
+  const isAssetFile = "asset_code" in data[0];
+
   const validRows = [];
   const errors = [];
 
   data.forEach((row, index) => {
-    const euid = String(row.euid || "").trim();
-    const first_name = String(row.first_name || "").trim();
-    const email = String(row.email || "").trim();
+    if (isAssetFile) {
+      const asset_code = String(row.asset_code || "").trim();
 
-    if (!euid || !first_name || !email) {
-      errors.push({
-        row: index + 2, // +2 because Excel header + 0 index
-        reason: "Missing required fields (euid, first_name, email)",
-      });
+      if (!asset_code) {
+        errors.push({
+          row: index + 2,
+          reason: "Missing asset_code",
+        });
+      } else {
+        validRows.push(row);
+      }
     } else {
-      validRows.push(row);
+      // fallback to employee logic
+      const euid = String(row.euid || "").trim();
+      const first_name = String(row.first_name || "").trim();
+      const email = String(row.email || "").trim();
+
+      if (!euid || !first_name || !email) {
+        errors.push({
+          row: index + 2,
+          reason: "Missing required fields (euid, first_name, email)",
+        });
+      } else {
+        validRows.push(row);
+      }
     }
   });
 
-  const inserted = await insertEmployeesBulk(validRows);
+  let inserted = [];
+
+  if (isAssetFile) {
+    inserted = await insertAssetsBulk(validRows);
+  } else {
+    inserted = await insertEmployeesBulk(validRows);
+  }
 
   return {
     total: data.length,
