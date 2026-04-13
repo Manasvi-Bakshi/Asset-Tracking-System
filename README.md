@@ -118,7 +118,6 @@ npm run dev
 - **Device Health Engine**: Integrate AI/ML for device health monitoring.
 - **Excel Import**: Bulk upload for employees and attendance.
 - **RFID Integration**: Real hardware event ingestion.
-- **Auto-refresh & Real-time Updates**: Improve frontend reactivity.
 - **Production Hardening**: Input validation, error handling, and security.
 
 
