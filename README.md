@@ -2,22 +2,8 @@
 
 A modern, event-driven **Asset Management System** for enterprises, featuring real-time asset assignment, employee attendance tracking, and robust data integration. Built as a full-stack monorepo with a clean separation of backend and frontend, this project is designed for extensibility, learning, and real-world use.
 
----
 
 ##  Overview
-
-This system enables organizations to:
-
-- Track company assets (laptops, devices, etc.) and their assignments to employees
-- Monitor employee attendance using event-driven logic (e.g., device presence, office entry/exit)
-- Visualize and manage data through intuitive admin and employee dashboards
-- Fully integrated with a PostgreSQL database.
-
-The project is structured as a **monorepo** with independent frontend and backend applications, both fully integrated with a PostgreSQL database.
-
----
-
-##  Key Features
 
 - **Event-driven attendance engine**: Attendance is automatically created and updated based on device presence events (ENTER/EXIT).
 - **Asset assignment tracking**: Assign assets to employees and view real-time status.
@@ -25,7 +11,6 @@ The project is structured as a **monorepo** with independent frontend and backen
 - **Relational database**: Clean PostgreSQL schema with enforced relationships.
 - **Separation of concerns**: Backend owns business logic; frontend is a pure data consumer.
 - **Extensible architecture**: Designed for easy addition of features like device health, geofencing, and authentication.
-
 
 
 ##  How It Works
@@ -65,21 +50,21 @@ PostgreSQL (raw SQL)
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
+git clone (this repo)
 cd Asset-Managment
 ```
 
 ### 2. Backend Setup
 
+Configure your database connection in backend/.env
+- DB_HOST=localhost
+- DB_USER=postgres
+- DB_PASSWORD=yourpassword
+- DB_NAME=iris_db
+
 ```bash
 cd backend
 npm install
-# Configure your database connection in backend/.env
-# Example .env:
-# DB_HOST=localhost
-# DB_USER=postgres
-# DB_PASSWORD=yourpassword
-# DB_NAME=iris_db
 npm start
 # Backend runs on http://localhost:5000
 ```
@@ -99,7 +84,6 @@ npm run dev
 - Create the required tables as described in `DB_Setup.md`.
 - Tables used: `employees`, `assets`, `asset_assignments`, `attendance_daily`, `asset_presence_events`, `locations`, `roles`, `permissions`, `role_permissions`.
 
----
 
 ##  Usage
 
@@ -128,7 +112,3 @@ npm run dev
 3. Open an issue or pull request with your changes
 
 **Let’s build something great together!**
-
-
-**Thank you for checking out the Asset Management System!**  
-Feel free to reach out, experiment, and help us make this project even better.
