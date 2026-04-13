@@ -32,59 +32,69 @@ export function EmployeeDashboard({ userName, employeeEuid, onLogout }: Employee
     }
   };
 
-  useEffect(() => {
+useEffect(() => {
   if (hasMarkedPresence.current) return;
 
   async function markPresenceOnce() {
+    console.log("🚀 Starting presence flow");
+
     try {
-      // 🔹 Step 1: fetch assigned asset for this employee
+      console.log("📡 Fetching assigned asset...");
+
       const res = await fetch(
-        `http://localhost:5000/employees/${employeeEuid}/assets`
+        `${import.meta.env.VITE_API_BASE_URL}/employees/${employeeEuid}/assets`
       );
+
       const json = await res.json();
+      console.log("📦 Asset response:", json);
 
       const assignedAsset = json?.data?.[0];
 
       if (!assignedAsset) {
-        console.warn("No assigned asset found — skipping presence");
+        console.warn("❌ No assigned asset found — stopping");
         return;
       }
 
       const assetId = assignedAsset.id;
       const locationId = assignedAsset.location_id;
 
-      if (!assetId || !locationId) {
-        console.warn("Missing asset/location for presence");
-        return;
-      }
+      console.log("🧩 Asset + Location:", assetId, locationId);
 
-      // 🔹 Step 2: ensure geolocation available
       if (!navigator.geolocation) {
-        console.warn("Geolocation not supported");
+        console.warn("❌ Geolocation not supported");
         return;
       }
 
-      // 🔹 Step 3: get live GPS
+      console.log("📍 Requesting GPS...");
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          console.log("📍 GPS received:", position.coords);
+
           try {
-            await postPresence({
+            const response = await postPresence({
               asset_id: assetId,
               location_id: locationId,
               event_type: "ENTER",
               source: "WEB",
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
+              gps: {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+              },
+              network: {
+                ssid: "ST_OFFICE_WIFI",
+              },
             });
 
+            console.log("✅ Presence API response:", response);
+
             hasMarkedPresence.current = true;
-            console.log("✅ Auto presence marked");
           } catch (err) {
-            console.error("Presence API failed", err);
+            console.error("❌ Presence API failed", err);
           }
         },
         (error) => {
-          console.error("Location permission denied", error);
+          console.error("❌ GPS error:", error);
         },
         {
           enableHighAccuracy: true,
@@ -92,7 +102,7 @@ export function EmployeeDashboard({ userName, employeeEuid, onLogout }: Employee
         }
       );
     } catch (err) {
-      console.error("Failed to fetch assigned asset", err);
+      console.error("❌ Fetch failed:", err);
     }
   }
 

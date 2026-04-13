@@ -9,8 +9,17 @@ export interface PresencePayload {
   location_id: string;
   event_type: "ENTER" | "EXIT";
   source: string;
-  latitude?: number;
-  longitude?: number;
+
+  // ✅ NEW: GPS structure (matches backend)
+  gps?: {
+    latitude: number;
+    longitude: number;
+  };
+
+  // ✅ NEW: WLAN support
+  network?: {
+    ssid: string;
+  };
 }
 
 export async function postPresence(payload: PresencePayload) {
