@@ -10,11 +10,15 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [selectedRole, setSelectedRole] = useState<'admin' | 'employee'>('admin');
   const [name, setName] = useState('');
 
+  const isEmployee = selectedRole === 'employee';
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim()) {
-      onLogin(selectedRole, name.trim());
-    }
+
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+
+    onLogin(selectedRole, trimmedName);
   };
 
   return (
@@ -24,29 +28,39 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           <div className="flex justify-center mb-4">
             <img src={stLogo} alt="ST Logo" className="h-20 w-auto" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">ST Asset Management System</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            ST Asset Tracking System
+          </h1>
           <p className="text-gray-600">Select your role and login</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Dynamic Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Your Name
+              {isEmployee ? 'Enter Employee ID (EUID)' : 'Your Name'}
             </label>
+
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your name"
+              placeholder={
+                isEmployee
+                  ? 'Enter Employee ID (EUID)'
+                  : 'Enter your name'
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
               required
             />
           </div>
 
+          {/* Role Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
               Select Role
             </label>
+
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
@@ -82,9 +96,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             </div>
           </div>
 
+          {/* Submit */}
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            disabled={!name.trim()}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             Login as {selectedRole === 'admin' ? 'Admin' : 'Employee'}
           </button>
