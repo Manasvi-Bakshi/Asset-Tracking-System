@@ -10,6 +10,64 @@ import {
   getEventDateIST
 } from "./presence.repository.js";
 
+// --- CONFIG ---
+const DEFAULT_RADIUS_METERS = 100;
+
+// --- UTILS ---
+function toRadians(deg) {
+  return deg * (Math.PI / 180);
+}
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // meters
+
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) ** 2;
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
+function validateLocation(input, location) {
+  let gpsValid = false;
+  let wlanValid = false;
+
+  // --- GPS VALIDATION ---
+  if (
+    input?.gps?.latitude &&
+    input?.gps?.longitude &&
+    location.latitude &&
+    location.longitude
+  ) {
+    const distance = calculateDistance(
+      input.gps.latitude,
+      input.gps.longitude,
+      Number(location.latitude),
+      Number(location.longitude)
+    );
+
+    gpsValid = distance <= DEFAULT_RADIUS_METERS;
+  }
+
+  // --- WLAN VALIDATION ---
+  if (input?.network?.ssid && location.last_known_network) {
+    wlanValid = input.network.ssid === location.last_known_network;
+  }
+
+  return {
+    gpsValid,
+    wlanValid,
+    allowed: gpsValid || wlanValid
+  };
+}
+
 export async function processPresenceEvent(data) {
   const client = await pool.connect();
 
@@ -22,6 +80,16 @@ export async function processPresenceEvent(data) {
     if (!officeLocation) {
       await client.query("COMMIT");
       return { message: "Not an office location. Attendance not processed." };
+    }
+
+    // 🆕 LOCATION VALIDATION
+    const validation = validateLocation(data, officeLocation);
+
+    if (!validation.allowed) {
+      await client.query("COMMIT");
+      return {
+        message: "Presence rejected: outside geofence or invalid network."
+      };
     }
 
     const assignment = await getActiveAssignment(event.asset_id);

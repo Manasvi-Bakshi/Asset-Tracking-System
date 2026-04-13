@@ -91,8 +91,8 @@ export async function updateAttendanceExit(record_id, exit_time) {
       last_exit_time = $1,
       total_duration_minutes =
         COALESCE(total_duration_minutes, 0) +  
-        EXTRACT(EPOCH FROM ($1 - first_entry_time)) / 60
-        last_entry_time = NULL
+        EXTRACT(EPOCH FROM ($1 - first_entry_time)) / 60,
+      last_entry_time = NULL
     WHERE id = $2
       AND last_entry_time IS NOT NULL
     RETURNING *
