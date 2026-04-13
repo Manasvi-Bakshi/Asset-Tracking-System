@@ -1,22 +1,26 @@
-import express from "express"
-import cors from "cors"
-import { getAssets } from "./assets/assets.controller.js"
-import { getEmployees } from "./employees/employees.controller.js"
-import { login } from "./auth/auth.controller.js"
+import express from "express";
+import cors from "cors";
+
+import { getAssets } from "./assets/assets.controller.js";
+import { getEmployees } from "./employees/employees.controller.js";
+import { login } from "./auth/auth.controller.js";
 import { listEmployees } from "./employees/employees.service.js";
 import { listAssets } from "./assets/assets.service.js";
+
 import { postPresenceEvent } from "./presence/presence.controller.js";
 import { postOfficeLocation } from "./presence/presence.controller.js";
-
 
 import {
   getEmployeeByEuidController,
   getEmployeeAssets,
   getEmployeeAttendance
-} from "./employees/employees.controller.js"
+} from "./employees/employees.controller.js";
 
+// ✅ NEW IMPORTS
+import { upload } from "./upload/upload.middleware.js";
+import { uploadExcel } from "./upload/upload.controller.js";
 
-const app = express()
+const app = express();
 
 app.use(
   cors({
@@ -25,24 +29,26 @@ app.use(
   })
 );
 
-app.use(express.json())
+app.use(express.json());
 
 app.get("/health", (req, res) => {
-  res.send("API is running")
-})
+  res.send("API is running");
+});
 
-app.post("/auth/login", login)
+app.post("/auth/login", login);
 
-app.get("/assets", getAssets)
+app.get("/assets", getAssets);
 
-app.get("/employees", getEmployees)
-app.get("/employees/:euid", getEmployeeByEuidController)
-app.get("/employees/:euid/assets", getEmployeeAssets)
-app.get("/employees/:euid/attendance", getEmployeeAttendance)
+app.get("/employees", getEmployees);
+app.get("/employees/:euid", getEmployeeByEuidController);
+app.get("/employees/:euid/assets", getEmployeeAssets);
+app.get("/employees/:euid/attendance", getEmployeeAttendance);
 
 app.post("/presence", postPresenceEvent);
 app.post("/locations/office", postOfficeLocation);
 
+// ✅ NEW ROUTE
+app.post("/upload/excel", upload.single("file"), uploadExcel);
 
 app.get("/reports/summary", async (req, res) => {
   try {
@@ -69,4 +75,4 @@ app.get("/reports/summary", async (req, res) => {
   }
 });
 
-export default app
+export default app;
