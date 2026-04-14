@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import { Search, Download, Plus, Edit, Trash2, Filter } from "lucide-react";
+import { Search, Download, Filter } from "lucide-react";
 import { fetchAssets } from "@/api/assets";
 import type { Asset as BackendAsset } from "@/types/asset";
 
@@ -115,10 +115,6 @@ export function AssetManagement() {
             <Download className="w-4 h-4" />
             Export to Excel
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-            <Plus className="w-4 h-4" />
-            Add Asset
-          </button>
         </div>
       </div>
 
@@ -164,9 +160,6 @@ export function AssetManagement() {
                 <th className="px-4 py-3 text-left text-xs font-semibold bg-gray-100">
                   Condition
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold bg-gray-100">
-                  Actions
-                </th>
               </tr>
             </thead>
 
@@ -206,16 +199,6 @@ export function AssetManagement() {
                       }
                       label={asset.condition.toUpperCase()}
                     />
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button className="p-1 text-blue-600" aria-label="Edit asset">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button className="p-1 text-red-600" aria-label="Delete asset">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
                   </td>
                 </tr>
               ))}
