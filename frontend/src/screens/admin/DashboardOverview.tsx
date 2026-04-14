@@ -92,21 +92,26 @@ export function DashboardOverview() {
 
       {/* ✅ NEW SECTION: Office Configuration */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">
           Office Configuration
         </h3>
+        <p className="text-sm text-gray-500 mt-1 mb-4">
+          Set your current office location for attendance validation.
+        </p>
 
-        <div className="flex items-center gap-4">
+        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 space-y-3">
           <button
             onClick={handleSetOfficeLocation}
             disabled={locationLoading}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="inline-flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
           >
             {locationLoading ? "Setting Location..." : "Set Office Location"}
           </button>
 
           {locationMessage && (
-            <span className="text-sm text-gray-700">{locationMessage}</span>
+            <div className="text-sm text-gray-700 bg-white border border-gray-200 rounded-md px-3 py-2">
+              {locationMessage}
+            </div>
           )}
         </div>
       </div>

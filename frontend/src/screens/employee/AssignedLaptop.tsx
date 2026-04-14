@@ -129,30 +129,50 @@ export function AssignedLaptop({ employeeEuid }: AssignedLaptopProps) {
         </div>
       </div>
 
-      {/* Technical Section Placeholder */}
+      {/* Device Summary */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-center gap-3 mb-4">
           <FileText className="w-6 h-6 text-purple-600" />
           <h3 className="text-lg font-semibold text-gray-900">
-            Technical Specifications
+            Device Summary
           </h3>
         </div>
-        <p className="text-gray-600">
-          Technical specifications will be integrated later.
-        </p>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+            <span className="text-gray-600">Model</span>
+            <span className="font-semibold text-gray-900">{asset.model}</span>
+          </div>
+          <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+            <span className="text-gray-600">Company</span>
+            <span className="font-semibold text-gray-900">{asset.company}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600">Asset Code</span>
+            <span className="font-semibold text-gray-900">{asset.asset_code}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Condition Placeholder */}
+      {/* Basic Device Info */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-center gap-3 mb-4">
           <Wrench className="w-6 h-6 text-orange-600" />
           <h3 className="text-lg font-semibold text-gray-900">
-            Condition & Maintenance
+            Basic Device Info
           </h3>
         </div>
-        <p className="text-gray-600">
-          Device health integration will be implemented next phase.
-        </p>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+            <span className="text-gray-600">Serial Number</span>
+            <span className="font-semibold text-gray-900 font-mono">
+              {asset.serial_number}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600">Current Status</span>
+            <span className="font-semibold text-gray-900">{asset.status}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
