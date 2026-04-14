@@ -53,6 +53,10 @@ function mapBackendAsset(asset: BackendAsset): Asset {
 export function AssetManagement() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState("");
+  const [conditionFilter, setConditionFilter] = useState<
+    "all" | Asset["condition"]
+  >("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,118 +91,199 @@ export function AssetManagement() {
   };
 
   const toggleAll = () => {
-    if (selectedAssets.size === assets.length) {
-      setSelectedAssets(new Set());
+    const visibleIds = visibleAssets.map((a) => a.id);
+    const allVisibleSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedAssets.has(id));
+
+    if (allVisibleSelected) {
+      const next = new Set(selectedAssets);
+      visibleIds.forEach((id) => next.delete(id));
+      setSelectedAssets(next);
     } else {
-      setSelectedAssets(new Set(assets.map(a => a.id)));
+      const next = new Set(selectedAssets);
+      visibleIds.forEach((id) => next.add(id));
+      setSelectedAssets(next);
     }
   };
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const visibleAssets = assets.filter((asset) => {
+    const matchesSearch =
+      normalizedSearch.length === 0 ||
+      asset.id.toLowerCase().includes(normalizedSearch) ||
+      asset.model.toLowerCase().includes(normalizedSearch) ||
+      asset.serialNumber.toLowerCase().includes(normalizedSearch);
+    const matchesFilter =
+      conditionFilter === "all" || asset.condition === conditionFilter;
+    return matchesSearch && matchesFilter;
+  });
+
+  const allVisibleSelected =
+    visibleAssets.length > 0 &&
+    visibleAssets.every((asset) => selectedAssets.has(asset.id));
+
+  const handleFilterClick = () => {
+    const order: Array<"all" | Asset["condition"]> = [
+      "all",
+      "excellent",
+      "good",
+      "fair",
+      "poor",
+    ];
+    const nextIndex = (order.indexOf(conditionFilter) + 1) % order.length;
+    setConditionFilter(order[nextIndex]);
+  };
+
+  const handleExportCsv = () => {
+    const headers = [
+      "Asset ID",
+      "Laptop Model",
+      "Serial Number",
+      "Issue Date",
+      "Warranty",
+      "Condition",
+    ];
+    const rows = visibleAssets.map((asset) => [
+      asset.id,
+      asset.model,
+      asset.serialNumber,
+      asset.issueDate,
+      asset.warranty,
+      asset.condition,
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) =>
+        row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `assets-${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-8 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900">
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold text-gray-900 leading-tight">
             ST Asset Management
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500">
             Comprehensive asset tracking and inventory system
           </p>
         </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-            <Filter className="w-4 h-4" />
-            Filter
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-            <Download className="w-4 h-4" />
-            Export to Excel
-          </button>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by asset ID, model, serial number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 h-12 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleFilterClick}
+              className="inline-flex items-center gap-2 px-4 h-12 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition"
+            >
+              <Filter className="w-4 h-4" />
+              Filter: {conditionFilter === "all" ? "All" : conditionFilter}
+            </button>
+            <button
+              onClick={handleExportCsv}
+              className="inline-flex items-center gap-2 px-4 h-12 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search by asset ID, model, serial number..."
-          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-        />
-      </div>
-
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-2">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b-2 border-gray-300">
-                <th className="px-4 py-3 border-r border-gray-200">
+              <tr className="bg-blue-50/50 border-b border-gray-300">
+                <th className="px-4 py-3.5 border-r border-gray-200">
                   <input
                     type="checkbox"
-                    checked={selectedAssets.size === assets.length}
+                    checked={allVisibleSelected}
                     onChange={toggleAll}
                     className="w-4 h-4"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold bg-gray-100">
+                <th className="px-4 py-3.5 text-left text-xs font-semibold tracking-wide text-gray-700 bg-gray-100">
                   Asset ID
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold bg-gray-100">
+                <th className="px-4 py-3.5 text-left text-xs font-semibold tracking-wide text-gray-700 bg-gray-100">
                   Laptop Model
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold bg-gray-100">
+                <th className="px-4 py-3.5 text-left text-xs font-semibold tracking-wide text-gray-700 bg-gray-100">
                   Serial Number
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold bg-gray-100">
+                <th className="px-4 py-3.5 text-left text-xs font-semibold tracking-wide text-gray-700 bg-gray-100">
                   Issue Date
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold bg-gray-100">
+                <th className="px-4 py-3.5 text-left text-xs font-semibold tracking-wide text-gray-700 bg-gray-100">
                   Warranty
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold bg-gray-100">
+                <th className="px-4 py-3.5 text-left text-xs font-semibold tracking-wide text-gray-700 bg-gray-100">
                   Condition
                 </th>
               </tr>
             </thead>
 
             <tbody>
-              {assets.map((asset, index) => (
+              {visibleAssets.map((asset, index) => (
                 <tr
                   key={asset.id}
-                  className={`border-b ${
-                    index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                  className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${
+                    index % 2 === 0 ? "bg-white" : "bg-slate-50/60"
                   }`}
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-4">
                     <input
                       type="checkbox"
                       checked={selectedAssets.has(asset.id)}
                       onChange={() => toggleAsset(asset.id)}
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm font-medium">
+                  <td className="px-4 py-4 text-sm font-medium text-gray-900">
                     {asset.id}
                   </td>
-                  <td className="px-4 py-3 text-sm">{asset.model}</td>
-                  <td className="px-4 py-3 text-sm font-mono">
+                  <td className="px-4 py-4 text-sm text-gray-700">{asset.model}</td>
+                  <td className="px-4 py-4 text-sm font-mono text-gray-700">
                     {asset.serialNumber}
                   </td>
-                  <td className="px-4 py-3 text-sm">{asset.issueDate}</td>
-                  <td className="px-4 py-3 text-sm">{asset.warranty}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge
-                      status={
-                        asset.condition === "excellent" ||
-                        asset.condition === "good"
-                          ? "success"
-                          : asset.condition === "fair"
-                          ? "warning"
-                          : "danger"
-                      }
-                      label={asset.condition.toUpperCase()}
-                    />
+                  <td className="px-4 py-4 text-sm text-gray-700">{asset.issueDate}</td>
+                  <td className="px-4 py-4 text-sm text-gray-700">{asset.warranty}</td>
+                  <td className="px-4 py-4">
+                    <div className="inline-flex rounded-full">
+                      <StatusBadge
+                        status={
+                          asset.condition === "excellent" ||
+                          asset.condition === "good"
+                            ? "success"
+                            : asset.condition === "fair"
+                            ? "warning"
+                            : "danger"
+                        }
+                        label={asset.condition.toUpperCase()}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -209,7 +294,7 @@ export function AssetManagement() {
 
       {/* Summary */}
       <div className="text-sm text-gray-600">
-        Showing {assets.length} assets
+        Showing {visibleAssets.length} assets
       </div>
     </div>
   );
