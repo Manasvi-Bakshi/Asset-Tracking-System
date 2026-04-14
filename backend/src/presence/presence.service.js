@@ -7,9 +7,9 @@ import {
   createAttendance,
   updateAttendanceExit,
   updateAttendanceEntry,
-  getEventDateIST
+  getEventDateIST,
+  upsertOfficeLocation
 } from "./presence.repository.js";
-import { upsertOfficeLocation } from "./presence.repository.js";
 
 // --- CONFIG ---
 const DEFAULT_RADIUS_METERS = 100;
@@ -20,7 +20,7 @@ function toRadians(deg) {
 }
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371000; // meters
+  const R = 6371000;
 
   const dLat = toRadians(lat2 - lat1);
   const dLon = toRadians(lon2 - lon1);
@@ -40,7 +40,6 @@ function validateLocation(input, location) {
   let gpsValid = false;
   let wlanValid = false;
 
-  // --- GPS VALIDATION ---
   if (
     input?.gps?.latitude &&
     input?.gps?.longitude &&
@@ -57,7 +56,6 @@ function validateLocation(input, location) {
     gpsValid = distance <= DEFAULT_RADIUS_METERS;
   }
 
-  // --- WLAN VALIDATION ---
   if (input?.network?.ssid && location.last_known_network) {
     wlanValid = input.network.ssid === location.last_known_network;
   }
@@ -75,68 +73,73 @@ export async function processPresenceEvent(data) {
   try {
     await client.query("BEGIN");
 
-    const event = await insertPresenceEvent(data);
+    console.log("🚀 Presence event:", data);
 
-    const officeLocation = await getOfficeLocation(event.location_id);
+    const event = await insertPresenceEvent(client, data);
+
+    const officeLocation = await getOfficeLocation(client, event.location_id);
+    console.log("📍 Office:", officeLocation);
+
     if (!officeLocation) {
       await client.query("COMMIT");
-      return { message: "Not an office location. Attendance not processed." };
+      return { message: "Not an office location." };
     }
 
-    // 🆕 LOCATION VALIDATION
     const validation = validateLocation(data, officeLocation);
+    console.log("📡 Validation:", validation);
 
     if (!validation.allowed) {
       await client.query("COMMIT");
-      return {
-        message: "Presence rejected: outside geofence or invalid network."
-      };
+      return { message: "Rejected: outside geofence/WiFi." };
     }
 
-    const assignment = await getActiveAssignment(event.asset_id);
+    const assignment = await getActiveAssignment(client, event.asset_id);
+    console.log("👤 Assignment:", assignment);
+
     if (!assignment) {
       await client.query("COMMIT");
-      return { message: "No active assignment found. Attendance not processed." };
+      return { message: "No active assignment." };
     }
 
     const employee_id = assignment.employee_id;
-    const eventDate = await getEventDateIST(event.event_time);
+
+    const eventDate = await getEventDateIST(client, event.event_time);
+    console.log("📅 Date:", eventDate);
 
     const existingAttendance =
-      await getAttendanceForDate(employee_id, eventDate);
+      await getAttendanceForDate(client, employee_id, eventDate);
+
+    console.log("📊 Existing:", existingAttendance);
 
     if (event.event_type === "ENTER") {
       if (!existingAttendance) {
-        await createAttendance(employee_id, eventDate, event.event_time);
+        console.log("🔥 Creating attendance");
+        await createAttendance(client, employee_id, eventDate, event.event_time);
       } else {
-        await updateAttendanceEntry(
-          existingAttendance.id,
-          event.event_time
-        );
+        console.log("🔁 Updating entry");
+        await updateAttendanceEntry(client, existingAttendance.id, event.event_time);
       }
     }
 
     if (event.event_type === "EXIT") {
       if (existingAttendance) {
-        await updateAttendanceExit(
-          existingAttendance.id,
-          event.event_time
-        );
+        console.log("🚪 Updating exit");
+        await updateAttendanceExit(client, existingAttendance.id, event.event_time);
       }
     }
 
     await client.query("COMMIT");
+
     return { message: "Presence processed successfully." };
 
   } catch (error) {
     await client.query("ROLLBACK");
+    console.error("❌ ERROR:", error);
     throw error;
   } finally {
     client.release();
   }
 }
-
-
 
 export async function setOfficeLocation(data) {
   const { latitude, longitude } = data;

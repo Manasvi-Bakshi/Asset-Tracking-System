@@ -1,9 +1,7 @@
-import pool from "../shared/db/pg.client.js";
-
-export async function insertPresenceEvent(data) {
+export async function insertPresenceEvent(client, data) {
   const { asset_id, location_id, event_type, source } = data;
 
-  const { rows } = await pool.query(
+  const { rows } = await client.query(
     `
     INSERT INTO asset_presence_events (
       asset_id,
@@ -20,8 +18,8 @@ export async function insertPresenceEvent(data) {
   return rows[0];
 }
 
-export async function getOfficeLocation(location_id) {
-  const { rows } = await pool.query(
+export async function getOfficeLocation(client, location_id) {
+  const { rows } = await client.query(
     `
     SELECT *
     FROM locations
@@ -34,8 +32,8 @@ export async function getOfficeLocation(location_id) {
   return rows[0] || null;
 }
 
-export async function getActiveAssignment(asset_id) {
-  const { rows } = await pool.query(
+export async function getActiveAssignment(client, asset_id) {
+  const { rows } = await client.query(
     `
     SELECT aa.*, e.id AS employee_id
     FROM asset_assignments aa
@@ -49,8 +47,8 @@ export async function getActiveAssignment(asset_id) {
   return rows[0] || null;
 }
 
-export async function getAttendanceForDate(employee_id, date) {
-  const { rows } = await pool.query(
+export async function getAttendanceForDate(client, employee_id, date) {
+  const { rows } = await client.query(
     `
     SELECT *
     FROM attendance_daily
@@ -63,8 +61,8 @@ export async function getAttendanceForDate(employee_id, date) {
   return rows[0] || null;
 }
 
-export async function createAttendance(employee_id, date, entry_time) {
-  const { rows } = await pool.query(
+export async function createAttendance(client, employee_id, date, entry_time) {
+  const { rows } = await client.query(
     `
     INSERT INTO attendance_daily (
       employee_id,
@@ -74,7 +72,7 @@ export async function createAttendance(employee_id, date, entry_time) {
       total_duration_minutes,
       status
     )
-    VALUES ($1, $2, $3, 0, 'PRESENT')
+    VALUES ($1, $2, $3, $3, 0, 'PRESENT')
     RETURNING *
     `,
     [employee_id, date, entry_time]
@@ -83,8 +81,24 @@ export async function createAttendance(employee_id, date, entry_time) {
   return rows[0];
 }
 
-export async function updateAttendanceExit(record_id, exit_time) {
-  const { rows } = await pool.query(
+export async function updateAttendanceEntry(client, record_id, entry_time) {
+  const { rows } = await client.query(
+    `
+    UPDATE attendance_daily
+    SET
+      last_entry_time = $1,
+      status = 'PRESENT'
+    WHERE id = $2
+    RETURNING *
+    `,
+    [entry_time, record_id]
+  );
+
+  return rows[0];
+}
+
+export async function updateAttendanceExit(client, record_id, exit_time) {
+  const { rows } = await client.query(
     `
     UPDATE attendance_daily
     SET 
@@ -103,8 +117,8 @@ export async function updateAttendanceExit(record_id, exit_time) {
   return rows[0];
 }
 
-export async function getEventDateIST(timestamp) {
-  const { rows } = await pool.query(
+export async function getEventDateIST(client, timestamp) {
+  const { rows } = await client.query(
     `
     SELECT ($1 AT TIME ZONE 'Asia/Kolkata')::date AS attendance_date
     `,
@@ -114,25 +128,10 @@ export async function getEventDateIST(timestamp) {
   return rows[0].attendance_date;
 }
 
-export async function updateAttendanceEntry(record_id, entry_time) {
-  const { rows } = await pool.query(
-    `
-    UPDATE attendance_daily
-    SET
-      last_entry_time = $1,
-      status = 'PRESENT'
-    WHERE id = $2
-    RETURNING *
-    `,
-    [entry_time, record_id]
-  );
+// 🔵 keep this using pool (outside transaction)
+import pool from "../shared/db/pg.client.js";
 
-  return rows[0];
-}
-
-// ✅ FIXED VERSION (NO ON CONFLICT)
 export async function upsertOfficeLocation({ latitude, longitude }) {
-  // Step 1: Try updating existing office
   const updateResult = await pool.query(
     `
     UPDATE locations
@@ -148,7 +147,6 @@ export async function upsertOfficeLocation({ latitude, longitude }) {
     return updateResult.rows[0];
   }
 
-  // Step 2: If no office exists, insert new one
   const insertResult = await pool.query(
     `
     INSERT INTO locations (latitude, longitude, is_office, location_name)

@@ -16,10 +16,11 @@ export type EmployeePage = 'attendance' | 'device-health' | 'laptop';
 
 export function EmployeeDashboard({ userName, employeeEuid, onLogout }: EmployeeDashboardProps) {
   const [activePage, setActivePage] = useState<EmployeePage>('attendance');
-  const [displayName, setDisplayName] = useState(userName); // ✅ NEW
+  const [displayName, setDisplayName] = useState(userName);
+  const [refreshKey, setRefreshKey] = useState(0); // ✅ NEW
   const hasMarkedPresence = useRef(false);
 
-  // ✅ Fetch real employee name (NO new API file needed)
+  // ✅ Fetch real employee name
   useEffect(() => {
     async function fetchEmployeeName() {
       try {
@@ -50,9 +51,14 @@ export function EmployeeDashboard({ userName, employeeEuid, onLogout }: Employee
   const renderContent = () => {
     switch (activePage) {
       case 'attendance':
-        return <EmployeeAttendance employeeEuid={employeeEuid} />;
+        return (
+          <EmployeeAttendance
+            employeeEuid={employeeEuid}
+            refreshKey={refreshKey} // ✅ NEW
+          />
+        );
       case 'device-health':
-        return <EmployeeDeviceHealth />; // ✅ FIXED (no props)
+        return <EmployeeDeviceHealth />;
       case 'laptop':
         return <AssignedLaptop employeeEuid={employeeEuid} />;
       default:
@@ -60,11 +66,14 @@ export function EmployeeDashboard({ userName, employeeEuid, onLogout }: Employee
     }
   };
 
+  // ✅ PRESENCE FLOW (FIXED)
   useEffect(() => {
     if (hasMarkedPresence.current) return;
 
     async function markPresenceOnce() {
       try {
+        console.log("🚀 Starting presence flow");
+
         const res = await fetch(
           `${import.meta.env.VITE_API_BASE_URL}/employees/${employeeEuid}/assets`
         );
@@ -72,41 +81,56 @@ export function EmployeeDashboard({ userName, employeeEuid, onLogout }: Employee
         const json = await res.json();
         const assignedAsset = json?.data?.[0];
 
-        if (!assignedAsset) return;
+        let assetId: string | null = null;
+        let locationId: string | null = null;
 
-        const assetId = assignedAsset.id;
-        const locationId = assignedAsset.location_id;
+        if (!assignedAsset) {
+          console.warn("⚠️ No assigned asset — GPS only mode");
+        } else {
+          assetId = assignedAsset.id;
+          locationId = assignedAsset.location_id;
+        }
 
-        if (!assetId || !locationId) return;
-
-        if (!navigator.geolocation) return;
+        if (!navigator.geolocation) {
+          console.warn("❌ Geolocation not supported");
+          return;
+        }
 
         navigator.geolocation.getCurrentPosition(
           async (position) => {
+            console.log("📍 GPS:", position.coords);
+
             try {
-              await postPresence({
-                asset_id: assetId,
-                location_id: String(locationId),
-                event_type: "ENTER",
-                source: "WEB",
-
-                gps: {
-                   latitude: position.coords.latitude,
-                  longitude: position.coords.longitude,
-                 },
-
-                 network: {
+              if (assetId && locationId) {
+                await postPresence({
+                  asset_id: assetId,
+                  location_id: String(locationId),
+                  event_type: "ENTER",
+                  source: "WEB",
+                  gps: {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                  },
+                  network: {
                     ssid: "ST_OFFICE_WIFI",
-                   },
+                  },
                 });
 
+                console.log("✅ Presence marked");
+              } else {
+                console.warn("⚠️ Skipping presence API (no asset)");
+              }
+
+              // ✅ trigger UI refresh
               hasMarkedPresence.current = true;
+              setRefreshKey(prev => prev + 1);
+
             } catch (err) {
-              console.error("Presence API failed", err);
+              console.error("❌ Presence API failed", err);
             }
           },
           (error) => {
-            console.error("GPS error:", error);
+            console.error("❌ GPS error:", error);
           },
           {
             enableHighAccuracy: true,
@@ -114,7 +138,7 @@ export function EmployeeDashboard({ userName, employeeEuid, onLogout }: Employee
           }
         );
       } catch (err) {
-        console.error("Fetch failed:", err);
+        console.error("❌ Fetch failed:", err);
       }
     }
 
@@ -123,7 +147,7 @@ export function EmployeeDashboard({ userName, employeeEuid, onLogout }: Employee
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation Bar */}
+     {/* Top Navigation Bar */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">

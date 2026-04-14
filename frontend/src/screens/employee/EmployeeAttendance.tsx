@@ -4,6 +4,7 @@ import { apiGet } from "@/api/http";
 
 interface EmployeeAttendanceProps {
   employeeEuid: string;
+  refreshKey?: number; // ✅ used for auto refresh
 }
 
 interface AttendanceRecord {
@@ -15,13 +16,15 @@ interface AttendanceRecord {
   status: string | null;
 }
 
-export function EmployeeAttendance({ employeeEuid }: EmployeeAttendanceProps) {
+export function EmployeeAttendance({ employeeEuid, refreshKey }: EmployeeAttendanceProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchAttendance() {
       try {
+        console.log("🔄 Fetching attendance...");
+
         const response = await apiGet<{ success: boolean; data: AttendanceRecord[] }>(
           `/employees/${employeeEuid}/attendance`
         );
@@ -30,23 +33,28 @@ export function EmployeeAttendance({ employeeEuid }: EmployeeAttendanceProps) {
           setRecords(response.data);
         }
       } catch (error) {
-        console.error("Failed to fetch attendance", error);
+        console.error("❌ Failed to fetch attendance", error);
       } finally {
         setLoading(false);
       }
     }
 
     if (employeeEuid) {
+      setLoading(true); // ✅ ensures refresh shows loading properly
       fetchAttendance();
     }
-  }, [employeeEuid]);
+  }, [employeeEuid, refreshKey]); // ✅ CRITICAL FIX
 
   if (loading) {
     return <div className="p-8">Loading attendance...</div>;
   }
 
   if (records.length === 0) {
-    return <div className="p-8">No attendance records found.</div>;
+    return (
+      <div className="p-8 text-gray-500">
+        No attendance records found.
+      </div>
+    );
   }
 
   const latest = records[0];
