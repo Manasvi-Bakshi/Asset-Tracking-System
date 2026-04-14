@@ -16,15 +16,43 @@ export type EmployeePage = 'attendance' | 'device-health' | 'laptop';
 
 export function EmployeeDashboard({ userName, employeeEuid, onLogout }: EmployeeDashboardProps) {
   const [activePage, setActivePage] = useState<EmployeePage>('attendance');
+  const [displayName, setDisplayName] = useState(userName); // ✅ NEW
   const hasMarkedPresence = useRef(false);
 
+  // ✅ Fetch real employee name (NO new API file needed)
+  useEffect(() => {
+    async function fetchEmployeeName() {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/employees/${employeeEuid}`
+        );
+
+        const json = await res.json();
+
+        if (json?.data) {
+          const emp = json.data;
+          const fullName = `${emp.first_name || ""} ${emp.last_name || ""}`.trim();
+
+          if (fullName) {
+            setDisplayName(fullName);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch employee name", err);
+      }
+    }
+
+    if (employeeEuid) {
+      fetchEmployeeName();
+    }
+  }, [employeeEuid]);
 
   const renderContent = () => {
     switch (activePage) {
       case 'attendance':
         return <EmployeeAttendance employeeEuid={employeeEuid} />;
       case 'device-health':
-        return <EmployeeDeviceHealth />;
+        return <EmployeeDeviceHealth />; // ✅ FIXED (no props)
       case 'laptop':
         return <AssignedLaptop employeeEuid={employeeEuid} />;
       default:
@@ -32,83 +60,66 @@ export function EmployeeDashboard({ userName, employeeEuid, onLogout }: Employee
     }
   };
 
-useEffect(() => {
-  if (hasMarkedPresence.current) return;
+  useEffect(() => {
+    if (hasMarkedPresence.current) return;
 
-  async function markPresenceOnce() {
-    console.log("🚀 Starting presence flow");
+    async function markPresenceOnce() {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/employees/${employeeEuid}/assets`
+        );
 
-    try {
-      console.log("📡 Fetching assigned asset...");
+        const json = await res.json();
+        const assignedAsset = json?.data?.[0];
 
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/employees/${employeeEuid}/assets`
-      );
+        if (!assignedAsset) return;
 
-      const json = await res.json();
-      console.log("📦 Asset response:", json);
+        const assetId = assignedAsset.id;
+        const locationId = assignedAsset.location_id;
 
-      const assignedAsset = json?.data?.[0];
+        if (!assetId || !locationId) return;
 
-      if (!assignedAsset) {
-        console.warn("❌ No assigned asset found — stopping");
-        return;
-      }
+        if (!navigator.geolocation) return;
 
-      const assetId = assignedAsset.id;
-      const locationId = assignedAsset.location_id;
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            try {
+              await postPresence({
+                asset_id: assetId,
+                location_id: String(locationId),
+                event_type: "ENTER",
+                source: "WEB",
 
-      console.log("🧩 Asset + Location:", assetId, locationId);
+                gps: {
+                   latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                 },
 
-      if (!navigator.geolocation) {
-        console.warn("❌ Geolocation not supported");
-        return;
-      }
+                 network: {
+                    ssid: "ST_OFFICE_WIFI",
+                   },
+                });
 
-      console.log("📍 Requesting GPS...");
-
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          console.log("📍 GPS received:", position.coords);
-
-          try {
-            const response = await postPresence({
-              asset_id: assetId,
-              location_id: locationId,
-              event_type: "ENTER",
-              source: "WEB",
-              gps: {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-              },
-              network: {
-                ssid: "ST_OFFICE_WIFI",
-              },
-            });
-
-            console.log("✅ Presence API response:", response);
-
-            hasMarkedPresence.current = true;
-          } catch (err) {
-            console.error("❌ Presence API failed", err);
+              hasMarkedPresence.current = true;
+            } catch (err) {
+              console.error("Presence API failed", err);
+            }
+          },
+          (error) => {
+            console.error("GPS error:", error);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
           }
-        },
-        (error) => {
-          console.error("❌ GPS error:", error);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-        }
-      );
-    } catch (err) {
-      console.error("❌ Fetch failed:", err);
+        );
+      } catch (err) {
+        console.error("Fetch failed:", err);
+      }
     }
-  }
 
-  markPresenceOnce();
-}, [employeeEuid]);
-
+    markPresenceOnce();
+  }, [employeeEuid]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -125,7 +136,7 @@ useEffect(() => {
               <nav className="flex gap-2">
                 <button
                   onClick={() => setActivePage('attendance')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
                     activePage === 'attendance'
                       ? 'bg-blue-50 text-blue-600 font-medium'
                       : 'text-gray-600 hover:bg-gray-100'
@@ -137,7 +148,7 @@ useEffect(() => {
                 
                 <button
                   onClick={() => setActivePage('device-health')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
                     activePage === 'device-health'
                       ? 'bg-blue-50 text-blue-600 font-medium'
                       : 'text-gray-600 hover:bg-gray-100'
@@ -149,7 +160,7 @@ useEffect(() => {
                 
                 <button
                   onClick={() => setActivePage('laptop')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
                     activePage === 'laptop'
                       ? 'bg-blue-50 text-blue-600 font-medium'
                       : 'text-gray-600 hover:bg-gray-100'
@@ -161,14 +172,21 @@ useEffect(() => {
               </nav>
             </div>
 
+            {/* ✅ IMPROVED USER DISPLAY */}
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">{userName}</div>
-                <div className="text-xs text-gray-500">Employee</div>
+                <div className="text-sm font-medium text-gray-900">
+                  {displayName}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {employeeEuid}
+                </div>
               </div>
+
               <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-semibold">
-                {userName.charAt(0).toUpperCase()}
+                {displayName.charAt(0).toUpperCase()}
               </div>
+
               <button
                 onClick={onLogout}
                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
