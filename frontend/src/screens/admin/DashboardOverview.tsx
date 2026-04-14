@@ -16,6 +16,9 @@ import { fetchAssets } from "@/api/assets";
 export function DashboardOverview() {
   const [employeeCount, setEmployeeCount] = useState(0);
   const [assetCount, setAssetCount] = useState(0);
+  const [availableCount, setAvailableCount] = useState(0);
+  const [maintenanceCount, setMaintenanceCount] = useState(0);
+  const [deployedCount, setDeployedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // ✅ NEW STATE (office location)
@@ -27,6 +30,15 @@ export function DashboardOverview() {
       .then(([employees, assets]) => {
         setEmployeeCount(employees.length);
         setAssetCount(assets.length);
+        setAvailableCount(
+          assets.filter((asset) => asset.status === "AVAILABLE").length
+        );
+        setMaintenanceCount(
+          assets.filter((asset) => asset.status === "MAINTENANCE").length
+        );
+        setDeployedCount(
+          assets.filter((asset) => asset.status === "DEPLOYED").length
+        );
       })
       .catch((err) => {
         console.error("Dashboard fetch failed:", err);
@@ -168,21 +180,21 @@ export function DashboardOverview() {
           />
           <StatCard
             title="Available"
-            value="—"
+            value={availableCount.toString()}
             icon={Activity}
             color="green"
             subtitle="Status breakdown later"
           />
           <StatCard
             title="Maintenance"
-            value="—"
+            value={maintenanceCount.toString()}
             icon={AlertTriangle}
             color="yellow"
             subtitle="Status breakdown later"
           />
           <StatCard
             title="Deployed"
-            value="—"
+            value={deployedCount.toString()}
             icon={XCircle}
             color="red"
             subtitle="Status breakdown later"
