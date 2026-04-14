@@ -1,4 +1,4 @@
-import { insertAssetsBulk } from "./upload.repository.js";
+import { insertEmployeesBulk, insertAssetsBulk } from "./upload.repository.js";
 import xlsx from "xlsx";
 
 export async function processExcelFile(file) {
@@ -32,7 +32,6 @@ export async function processExcelFile(file) {
         validRows.push(row);
       }
     } else {
-      // fallback to employee logic
       const euid = String(row.euid || "").trim();
       const first_name = String(row.first_name || "").trim();
       const email = String(row.email || "").trim();
@@ -49,16 +48,22 @@ export async function processExcelFile(file) {
   });
 
   let inserted = [];
+  let duplicates = [];
 
   if (isAssetFile) {
-    inserted = await insertAssetsBulk(validRows);
+    const result = await insertAssetsBulk(validRows);
+    inserted = result.inserted;
+    duplicates = result.duplicates;
   } else {
-    inserted = await insertEmployeesBulk(validRows);
+    const result = await insertEmployeesBulk(validRows);
+    inserted = result.inserted;
+    duplicates = result.duplicates;
   }
 
   return {
     total: data.length,
     inserted: inserted.length,
+    duplicates: duplicates.length,
     skipped: errors.length,
     errors,
   };

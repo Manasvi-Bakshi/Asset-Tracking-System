@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export async function insertEmployeesBulk(rows) {
   const inserted = [];
+  const duplicates = [];
 
   for (const row of rows) {
     const euid = String(row.euid || "").trim();
@@ -12,7 +13,7 @@ export async function insertEmployeesBulk(rows) {
     const department = String(row.department || "").trim();
     const designation = String(row.designation || "").trim();
 
-    // ✅ STRICT VALIDATION
+    // ✅ VALIDATION
     if (!euid || !first_name || !email) {
       console.warn("Skipping invalid row:", row);
       continue;
@@ -46,14 +47,17 @@ export async function insertEmployeesBulk(rows) {
 
     if (result.length > 0) {
       inserted.push(result[0]);
+    } else {
+      duplicates.push({ euid });
     }
   }
 
-  return inserted;
+  return { inserted, duplicates };
 }
 
 export async function insertAssetsBulk(rows) {
   const inserted = [];
+  const duplicates = [];
 
   for (const row of rows) {
     const asset_code = String(row.asset_code || "").trim();
@@ -92,11 +96,23 @@ export async function insertAssetsBulk(rows) {
 
       if (result.length > 0) {
         inserted.push(result[0]);
+      } else {
+        duplicates.push({ asset_code });
       }
     } catch (err) {
+      // 🔥 Handle serial_number duplicate
+      if (err.code === "23505") {
+        duplicates.push({
+          asset_code,
+          serial_number,
+          reason: "duplicate serial_number",
+        });
+        continue;
+      }
+
       console.error("Asset insert error:", err);
     }
   }
 
-  return inserted;
+  return { inserted, duplicates };
 }
