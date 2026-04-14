@@ -97,10 +97,7 @@ npm run dev
 
 ##  Future Improvements
 
-- **Authentication & RBAC**: JWT-based login, enforce role-based access.
-- **Geofencing & WLAN Validation**: GPS radius and WiFi network checks for presence.
 - **Device Health Engine**: Integrate AI/ML for device health monitoring.
-- **Excel Import**: Bulk upload for employees and attendance.
 - **RFID Integration**: Real hardware event ingestion.
 - **Production Hardening**: Input validation, error handling, and security.
 
