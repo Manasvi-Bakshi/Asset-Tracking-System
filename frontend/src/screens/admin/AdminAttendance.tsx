@@ -3,7 +3,6 @@ import { fetchEmployees } from "@/api/employees";
 import type { Employee as BackendEmployee } from "@/types/employee";
 
 import { StatCard } from '@/components/common/StatCard';
-import { StatusBadge } from '@/components/common/StatusBadge';
 import { Users, CheckCircle, XCircle, Clock, Search, Download } from 'lucide-react';
 
 /*const attendanceData = [
@@ -23,7 +22,6 @@ interface UIAttendanceRecord {
   id: string;
   name: string;
   date: string;
-  timeIn: string;
   status: "present" | "late" | "absent";
 }
 
@@ -38,7 +36,6 @@ function generateTodayAttendance(emp: BackendEmployee): UIAttendanceRecord {
   const mod = emp.id % 5;
 
   let status: "present" | "late" | "absent";
-  let timeIn = "-";
 
   if (!emp.is_active) {
     status = "absent";
@@ -46,17 +43,14 @@ function generateTodayAttendance(emp: BackendEmployee): UIAttendanceRecord {
     status = "absent";
   } else if (mod === 1) {
     status = "late";
-    timeIn = "09:35 AM";
   } else {
     status = "present";
-    timeIn = "08:55 AM";
   }
 
   return {
     id: emp.euid,
     name: `${emp.first_name} ${emp.last_name}`,
     date: today,
-    timeIn,
     status,
   };
 }
@@ -96,6 +90,26 @@ export function AdminAttendance() {
   const absent = records.filter(r => r.status === "absent").length;
   const late = records.filter(r => r.status === "late").length;
 
+  const handleExport = () => {
+    const headers = ["Employee ID", "Name", "Date"];
+    const rows = records.map((record) => [record.id, record.name, record.date]);
+    const csv = [headers, ...rows]
+      .map((row) =>
+        row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `attendance-${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-8 space-y-6">
       {/* Stats */}
@@ -121,7 +135,10 @@ export function AdminAttendance() {
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+            >
               <Download className="w-4 h-4" />
               Export
             </button>
@@ -141,12 +158,6 @@ export function AdminAttendance() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Time In
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -160,21 +171,6 @@ export function AdminAttendance() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {record.date}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    {record.timeIn}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <StatusBadge
-                      status={
-                        record.status === "present"
-                          ? "success"
-                          : record.status === "late"
-                          ? "warning"
-                          : "danger"
-                      }
-                      label={record.status.toUpperCase()}
-                    />
                   </td>
                 </tr>
               ))}
