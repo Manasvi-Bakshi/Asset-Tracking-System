@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Download,
   Calendar,
   TrendingUp,
   FileText,
@@ -101,7 +100,7 @@ export function Reports() {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-semibold text-gray-900">
-          ST Reports & Analytics
+          ST Reports & Upload Data 
         </h2>
         <p className="text-gray-600 mt-1">
           System-level operational summary
@@ -178,17 +177,6 @@ export function Reports() {
         </div>
       </div>
 
-      {/* Export Section */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-3">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Report Downloads
-        </h3>
-
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm shadow-sm">
-          <Download className="w-4 h-4" />
-          Download Summary
-        </button>
-      </div>
     </div>
   );
 }

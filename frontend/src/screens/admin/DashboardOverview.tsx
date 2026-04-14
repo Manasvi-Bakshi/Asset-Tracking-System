@@ -19,6 +19,9 @@ export function DashboardOverview() {
   const [availableCount, setAvailableCount] = useState(0);
   const [maintenanceCount, setMaintenanceCount] = useState(0);
   const [deployedCount, setDeployedCount] = useState(0);
+  const [recentActivity, setRecentActivity] = useState<
+    { id: string; text: string; timestamp: string }[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   // ✅ NEW STATE (office location)
@@ -39,6 +42,34 @@ export function DashboardOverview() {
         setDeployedCount(
           assets.filter((asset) => asset.status === "DEPLOYED").length
         );
+
+        const employeeActivity = employees
+          .filter((employee) => employee.created_at)
+          .map((employee) => ({
+            id: `emp-${employee.id}`,
+            text: `Employee added: ${employee.first_name} ${employee.last_name}`,
+            timestamp: employee.created_at,
+          }));
+
+        const assetActivity = assets
+          .filter((asset) => asset.created_at)
+          .map((asset) => ({
+            id: `asset-${asset.id}`,
+            text: `Asset registered: ${asset.asset_code}`,
+            timestamp: asset.created_at,
+          }));
+
+        const parsed = [...employeeActivity, ...assetActivity]
+          .map((item) => ({
+            ...item,
+            time: new Date(item.timestamp).getTime(),
+          }))
+          .filter((item) => !Number.isNaN(item.time))
+          .sort((a, b) => b.time - a.time)
+          .slice(0, 5)
+          .map(({ id, text, timestamp }) => ({ id, text, timestamp }));
+
+        setRecentActivity(parsed);
       })
       .catch((err) => {
         console.error("Dashboard fetch failed:", err);
@@ -207,9 +238,25 @@ export function DashboardOverview() {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Recent Activity
         </h3>
-        <div className="text-sm text-gray-500">
-          Activity tracking will be implemented after full feature wiring.
-        </div>
+        {recentActivity.length === 0 ? (
+          <div className="text-sm text-gray-500">
+            No recent activity available.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {recentActivity.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-start justify-between gap-4 text-sm"
+              >
+                <span className="text-gray-700">{item.text}</span>
+                <span className="text-gray-500 whitespace-nowrap">
+                  {new Date(item.timestamp).toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
