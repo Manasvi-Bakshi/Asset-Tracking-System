@@ -16,9 +16,12 @@ import {
   getEmployeeAttendance
 } from "./employees/employees.controller.js";
 
-// ✅ NEW IMPORTS
+// Upload
 import { upload } from "./upload/upload.middleware.js";
 import { uploadExcel } from "./upload/upload.controller.js";
+
+// ✅ AUTH MIDDLEWARE
+import { authenticateToken } from "./shared/middleware/auth.middleware.js";
 
 const app = express();
 
@@ -31,25 +34,32 @@ app.use(
 
 app.use(express.json());
 
+// Health check (unprotected)
 app.get("/health", (req, res) => {
   res.send("API is running");
 });
 
+// Auth (unprotected)
 app.post("/auth/login", login);
 
-app.get("/assets", getAssets);
+// 🔒 Protected Routes
 
-app.get("/employees", getEmployees);
-app.get("/employees/:euid", getEmployeeByEuidController);
-app.get("/employees/:euid/assets", getEmployeeAssets);
-app.get("/employees/:euid/attendance", getEmployeeAttendance);
+app.get("/assets", authenticateToken, getAssets);
 
-app.post("/presence", postPresenceEvent);
+app.get("/employees", authenticateToken, getEmployees);
+app.get("/employees/:euid", authenticateToken, getEmployeeByEuidController);
+app.get("/employees/:euid/assets", authenticateToken, getEmployeeAssets);
+app.get("/employees/:euid/attendance", authenticateToken, getEmployeeAttendance);
+
+app.post("/presence", authenticateToken, postPresenceEvent);
+
+// (Optional: keep this open for now)
 app.post("/locations/office", postOfficeLocation);
 
-// ✅ NEW ROUTE
+// Upload (left unprotected for now)
 app.post("/upload/excel", upload.single("file"), uploadExcel);
 
+// Reports (can be protected later if needed)
 app.get("/reports/summary", async (req, res) => {
   try {
     const employees = await listEmployees();
