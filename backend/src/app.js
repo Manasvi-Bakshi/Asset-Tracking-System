@@ -16,9 +16,12 @@ import {
   getEmployeeAttendance
 } from "./employees/employees.controller.js";
 
-// ✅ NEW IMPORTS
+// CSV IMPORTS
 import { upload } from "./upload/upload.middleware.js";
 import { uploadExcel } from "./upload/upload.controller.js";
+
+// AI IMPORTS
+import aiRoutes from "./ai/ai.routes.js";
 
 const app = express();
 
@@ -74,5 +77,7 @@ app.get("/reports/summary", async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to generate report" });
   }
 });
+
+app.use("/api/ai", aiRoutes);
 
 export default app;
