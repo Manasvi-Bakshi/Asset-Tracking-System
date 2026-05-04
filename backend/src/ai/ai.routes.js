@@ -1,8 +1,8 @@
 import express from "express";
-import { getSimulatedDevice } from "./ai.controller.js";
+import { getEmployeeDeviceHealth } from "./ai.controller.js";
 
 const router = express.Router();
 
-router.get("/device", getSimulatedDevice);
+router.get("/employee/:euid", getEmployeeDeviceHealth);
 
 export default router;
