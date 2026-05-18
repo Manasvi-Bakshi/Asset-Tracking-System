@@ -1,187 +1,427 @@
 import { StatCard } from '@/components/common/StatCard';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { Laptop, Activity, AlertTriangle, XCircle, Search, Filter } from 'lucide-react';
 
-import { useEffect, useState } from "react";
-import { fetchAssets } from "@/api/assets";
-import type { Asset as BackendAsset } from "@/types/asset";
+import {
+  Laptop,
+  Activity,
+  AlertTriangle,
+  XCircle,
+  Search,
+  Filter,
+  Cpu
+} from 'lucide-react';
 
-/*const deviceData = [
-  { id: 'DEV001', assignedTo: 'John Doe', battery: 92, cpu: 'Good', lastCheck: '5 min ago', status: 'healthy' },
-  { id: 'DEV002', assignedTo: 'Sarah Smith', battery: 68, cpu: 'Good', lastCheck: '12 min ago', status: 'warning' },
-  { id: 'DEV003', assignedTo: 'Mike Johnson', battery: 88, cpu: 'Good', lastCheck: '3 min ago', status: 'healthy' },
-  { id: 'DEV004', assignedTo: 'Lisa Brown', battery: 25, cpu: 'High', lastCheck: '8 min ago', status: 'critical' },
-  { id: 'DEV005', assignedTo: 'Tom Wilson', battery: 95, cpu: 'Good', lastCheck: '2 min ago', status: 'healthy' },
-  { id: 'DEV006', assignedTo: 'Emma Davis', battery: 71, cpu: 'Moderate', lastCheck: '15 min ago', status: 'warning' },
-  { id: 'DEV007', assignedTo: 'James Taylor', battery: 18, cpu: 'Critical', lastCheck: '1 min ago', status: 'critical' },
-  { id: 'DEV008', assignedTo: 'Sophia Martinez', battery: 85, cpu: 'Good', lastCheck: '6 min ago', status: 'healthy' },
-  { id: 'DEV009', assignedTo: 'Oliver Anderson', battery: 78, cpu: 'Good', lastCheck: '10 min ago', status: 'healthy' },
-  { id: 'DEV010', assignedTo: 'Ava Garcia', battery: 62, cpu: 'Moderate', lastCheck: '4 min ago', status: 'warning' },
-];*/
+import {
+  useEffect,
+  useMemo,
+  useState
+} from "react";
 
-interface Device {
+import { apiGet } from "@/api/http";
+
+interface FleetDevice {
+
   id: string;
-  battery: number;
-  cpu: string;
-  lastCheck: string;
-  status: "healthy" | "warning" | "critical";
-}
 
-/* ---------------------------
-   Mapping Backend → Device
----------------------------- */
+  asset_code: string;
 
-function mapAssetToDevice(asset: BackendAsset): Device {
-  let status: "healthy" | "warning" | "critical";
-  let battery: number;
-  let cpu: string;
+  company: string;
 
-  if (asset.status === "AVAILABLE") {
-    status = "healthy";
-    battery = 90;
-    cpu = "Good";
-  } else if (asset.status === "DEPLOYED") {
-    status = "warning";
-    battery = 65;
-    cpu = "Moderate";
-  } else {
-    status = "critical";
-    battery = 25;
-    cpu = "Critical";
-  }
+  model: string;
 
-  return {
-    id: asset.asset_code,
-    battery,
-    cpu,
-    lastCheck: "Just now",
-    status,
-  };
+  employee_name: string | null;
+
+  euid: string | null;
+
+  battery: number | null;
+
+  cpu_label: string | null;
+
+  status: string | null;
+
+  predicted_label: string | null;
+
+  last_updated: string | null;
 }
 
 export function AdminDeviceHealth() {
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const [devices, setDevices] =
+    useState<FleetDevice[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [search, setSearch] =
+    useState("");
 
   useEffect(() => {
-    fetchAssets()
-      .then((assets) => {
-        const mapped = assets.map(mapAssetToDevice);
-        setDevices(mapped);
-      })
-      .catch((err) => {
-        console.error("Device health fetch failed:", err);
-      })
-      .finally(() => setLoading(false));
+
+    let intervalId: number;
+
+    async function fetchFleetHealth() {
+
+      try {
+
+        const data =
+          await apiGet<FleetDevice[]>(
+            "/api/ai/devices"
+          );
+
+        setDevices(data);
+
+      } catch (err) {
+
+        console.error(
+          "Fleet device health fetch failed:",
+          err
+        );
+
+      } finally {
+
+        setLoading(false);
+      }
+    }
+
+    fetchFleetHealth();
+
+    intervalId = window.setInterval(
+      fetchFleetHealth,
+      5000
+    );
+
+    return () => clearInterval(intervalId);
+
   }, []);
 
+  const filteredDevices =
+    useMemo(() => {
+
+      return devices.filter((device) => {
+
+        const term =
+          search.toLowerCase();
+
+        return (
+
+          device.asset_code
+            ?.toLowerCase()
+            .includes(term)
+
+          ||
+
+          device.employee_name
+            ?.toLowerCase()
+            .includes(term)
+
+          ||
+
+          device.company
+            ?.toLowerCase()
+            .includes(term)
+
+          ||
+
+          device.model
+            ?.toLowerCase()
+            .includes(term)
+        );
+      });
+
+    }, [devices, search]);
+
   if (loading) {
-    return <div className="p-8">Loading device health...</div>;
+
+    return (
+      <div className="p-8 text-gray-500">
+        Loading fleet device health...
+      </div>
+    );
   }
 
-  const total = devices.length;
-  const healthy = devices.filter(d => d.status === "healthy").length;
-  const warning = devices.filter(d => d.status === "warning").length;
-  const critical = devices.filter(d => d.status === "critical").length;
+  const total =
+    filteredDevices.length;
+
+  const healthy =
+    filteredDevices.filter(
+      d => d.status === "HEALTHY"
+    ).length;
+
+  const warning =
+    filteredDevices.filter(
+      d => d.status === "WARNING"
+    ).length;
+
+  const critical =
+    filteredDevices.filter(
+      d => d.status === "CRITICAL"
+    ).length;
 
   return (
+
     <div className="p-8 space-y-6">
-      {/* Stats */}
+
+      {/* KPI CARDS */}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Devices" value={total.toString()} icon={Laptop} color="blue" />
-        <StatCard title="Healthy Devices" value={healthy.toString()} icon={Activity} color="green" />
-        <StatCard title="Warning" value={warning.toString()} icon={AlertTriangle} color="yellow" />
-        <StatCard title="Critical" value={critical.toString()} icon={XCircle} color="red" />
+
+        <StatCard
+          title="Total Devices"
+          value={total.toString()}
+          icon={Laptop}
+          color="blue"
+        />
+
+        <StatCard
+          title="Healthy Devices"
+          value={healthy.toString()}
+          icon={Activity}
+          color="green"
+        />
+
+        <StatCard
+          title="Warning Devices"
+          value={warning.toString()}
+          icon={AlertTriangle}
+          color="yellow"
+        />
+
+        <StatCard
+          title="Devices Requiring Attention"
+          value={critical.toString()}
+          icon={XCircle}
+          color="red"
+        />
+
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200">
+      {/* TABLE */}
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Device Health Monitor
-          </h3>
+
+          <div>
+
+            <h3 className="text-lg font-semibold text-gray-900">
+              Device Health Monitoring
+            </h3>
+
+            <p className="text-sm text-gray-500 mt-1">
+              Real-time device health insights across enterprise assets
+            </p>
+
+          </div>
+
           <div className="flex gap-3">
+
             <div className="relative">
+
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+
               <input
                 type="text"
+                value={search}
+                onChange={(e) =>
+                  setSearch(e.target.value)
+                }
                 aria-label="Search devices"
                 placeholder="Search devices..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm w-64"
               />
+
             </div>
+
             <button
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50 transition"
               aria-label="Filter devices"
             >
+
               <Filter className="w-4 h-4" />
+
               Filter
+
             </button>
+
           </div>
         </div>
 
         <div className="overflow-x-auto">
+
           <table className="w-full">
+
             <thead className="bg-gray-50 border-b border-gray-200">
+
               <tr>
+
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Device ID
+                  Device
                 </th>
+
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Employee
+                </th>
+
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Battery
                 </th>
+
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   CPU
                 </th>
+
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Last Check-in
+                  AI Insight
                 </th>
+
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Last Update
+                </th>
+
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Status
                 </th>
+
               </tr>
             </thead>
 
             <tbody className="divide-y divide-gray-200">
-              {devices.map((device) => (
-                <tr key={device.id} className="hover:bg-gray-50 transition">
-                  <td className="px-6 py-4 text-sm font-medium">
-                    {device.id}
-                  </td>
+
+              {filteredDevices.map((device) => (
+
+                <tr
+                  key={device.id}
+                  className="hover:bg-gray-50 transition"
+                >
+
+                  {/* DEVICE */}
 
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2 w-24">
-                        <div
-                          className={`h-2 rounded-full ${
-                            device.battery >= 70
-                              ? "bg-green-500"
-                              : device.battery >= 30
-                              ? "bg-yellow-500"
-                              : "bg-red-500"
-                          }`}
-                          style={{ width: `${device.battery}%` }}
-                        />
-                      </div>
-                      <span className="text-sm">{device.battery}%</span>
+
+                    <div>
+
+                      <p className="text-sm font-semibold text-gray-900">
+                        {device.company} {device.model}
+                      </p>
+
+                      <p className="text-xs text-gray-500 mt-1">
+                        {device.asset_code}
+                      </p>
+
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 text-sm">{device.cpu}</td>
-                  <td className="px-6 py-4 text-sm">{device.lastCheck}</td>
+                  {/* EMPLOYEE */}
 
                   <td className="px-6 py-4">
+
+                    <div>
+
+                      <p className="text-sm font-medium text-gray-900">
+                        {device.employee_name ?? "Unassigned"}
+                      </p>
+
+                      <p className="text-xs text-gray-500 mt-1">
+                        {device.euid ?? "-"}
+                      </p>
+
+                    </div>
+                  </td>
+
+                  {/* BATTERY */}
+
+                  <td className="px-6 py-4">
+
+                    <div className="flex items-center gap-3">
+
+                      <div className="flex-1 bg-gray-200 rounded-full h-2 w-24">
+
+                        <div
+                          className={`h-2 rounded-full transition-all duration-700 ${
+                            (device.battery ?? 0) >= 70
+                              ? "bg-green-500"
+                              : (device.battery ?? 0) >= 40
+                              ? "bg-yellow-500"
+                              : "bg-orange-500"
+                          }`}
+                          style={{
+                            width: `${device.battery ?? 0}%`
+                          }}
+                        />
+
+                      </div>
+
+                      <span className="text-sm font-medium">
+                        {device.battery ?? 0}%
+                      </span>
+
+                    </div>
+                  </td>
+
+                  {/* CPU */}
+
+                  <td className="px-6 py-4">
+
+                    <div className="flex items-center gap-2">
+
+                      <Cpu className="w-4 h-4 text-gray-500" />
+
+                      <span className="text-sm text-gray-700">
+                        {device.cpu_label ?? "Monitoring"}
+                      </span>
+
+                    </div>
+                  </td>
+
+                  {/* AI */}
+
+                  <td className="px-6 py-4">
+
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+
+                      {
+                        device.predicted_label
+                          ?.replaceAll("_", " ")
+                          ?? "Monitoring"
+                      }
+
+                    </span>
+                  </td>
+
+                  {/* LAST UPDATE */}
+
+                  <td className="px-6 py-4 text-sm text-gray-500">
+
+                    {
+                      device.last_updated
+                        ? new Date(
+                            device.last_updated
+                          ).toLocaleTimeString()
+
+                        : "-"
+                    }
+
+                  </td>
+
+                  {/* STATUS */}
+
+                  <td className="px-6 py-4">
+
                     <StatusBadge
                       status={
-                        device.status === "healthy"
+                        device.status === "HEALTHY"
                           ? "success"
-                          : device.status === "warning"
-                          ? "warning"
-                          : "danger"
+
+                          : "warning"
                       }
-                      label={device.status.toUpperCase()}
+
+                      label={
+                        device.status ?? "MONITORING"
+                      }
                     />
+
                   </td>
+
                 </tr>
               ))}
             </tbody>

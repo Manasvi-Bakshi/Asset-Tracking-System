@@ -44,6 +44,10 @@ function mapToUI(label) {
   }
 }
 
+/*
+  EMPLOYEE DEVICE HEALTH
+*/
+
 export const getEmployeeDeviceHealth = async (req, res) => {
 
   try {
@@ -161,9 +165,102 @@ export const getEmployeeDeviceHealth = async (req, res) => {
   }
 };
 
+/*
+  ADMIN FLEET HEALTH
+*/
+
 export const getAllDevicesHealth = async (req, res) => {
 
   try {
+
+    /*
+      GET ALL ASSETS
+    */
+
+    const assetQuery = `
+      SELECT id
+      FROM assets
+    `;
+
+    const assetResult =
+      await pool.query(assetQuery);
+
+    /*
+      ENSURE EVERY DEVICE
+      HAS TELEMETRY + ML STATE
+    */
+
+    for (const asset of assetResult.rows) {
+
+      const asset_id =
+        asset.id;
+
+      const existingHealth =
+        await pool.query(
+          `
+            SELECT asset_id
+            FROM device_health
+            WHERE asset_id = $1
+          `,
+          [asset_id]
+        );
+
+      /*
+        CREATE INITIAL HEALTH
+        IF MISSING
+      */
+
+      if (existingHealth.rows.length === 0) {
+
+        const state =
+          getOrCreateState(asset_id);
+
+        const telemetry =
+          evolveState(state);
+
+        let predictedLabel = "Normal";
+
+        try {
+
+          predictedLabel =
+            await predictWithModel(
+              telemetry
+            );
+
+        } catch (err) {
+
+          console.error(
+            "Fleet ML fallback:",
+            err
+          );
+        }
+
+        const mapped =
+          mapToUI(predictedLabel);
+
+        await upsertDeviceHealth({
+
+          asset_id,
+
+          battery: Math.round(
+            telemetry.Battery_Health_Pct
+          ),
+
+          cpuLabel:
+            mapped.cpuLabel,
+
+          status:
+            mapped.status,
+
+          predictedLabel
+        });
+      }
+    }
+
+    /*
+      RETURN COMPLETE
+      FLEET HEALTH
+    */
 
     const devices =
       await getAllDeviceHealth();
