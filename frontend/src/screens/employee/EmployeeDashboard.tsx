@@ -58,11 +58,18 @@ export function EmployeeDashboard({ userName, employeeEuid, onLogout }: Employee
           />
         );
       case 'device-health':
-        return <EmployeeDeviceHealth />;
+        return (
+          <EmployeeDeviceHealth
+          employeeEuid={employeeEuid}/>
+        );
       case 'laptop':
         return <AssignedLaptop employeeEuid={employeeEuid} />;
       default:
-        return <EmployeeAttendance employeeEuid={employeeEuid} />;
+        return (
+            <EmployeeAttendance
+            employeeEuid={employeeEuid}
+            refreshKey={refreshKey}/>
+          );
     }
   };
 
