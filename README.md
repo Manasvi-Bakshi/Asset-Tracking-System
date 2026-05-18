@@ -82,7 +82,7 @@ npm run dev
 
 - Ensure your PostgreSQL instance is running.
 - Create the required tables as described in `DB_Setup.md`.
-- Tables used: `employees`, `assets`, `asset_assignments`, `attendance_daily`, `asset_presence_events`, `locations`, `roles`, `permissions`, `role_permissions`.
+- Tables used: `employees`, `assets`, `asset_assignments`, `attendance_daily`, `asset_presence_events`, `locations`, `roles`, `permissions`, `role_permissions`,`device_health`.
 
 
 ##  Usage
