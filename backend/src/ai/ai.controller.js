@@ -1,5 +1,10 @@
 import { predictWithModel } from "./model/predictor.js";
-import { upsertDeviceHealth } from "./deviceHealth.repository.js";
+
+import {
+  upsertDeviceHealth,
+  getAllDeviceHealth
+} from "./deviceHealth.repository.js";
+
 import pool from "../shared/db/pg.client.js";
 
 import {
@@ -8,25 +13,41 @@ import {
 } from "./simulation/deviceState.js";
 
 function mapToUI(label) {
+
   switch (label) {
+
     case "Normal":
-      return { status: "HEALTHY", cpuLabel: "Good" };
+      return {
+        status: "HEALTHY",
+        cpuLabel: "Good"
+      };
 
     case "Memory_Leak":
-      return { status: "WARNING", cpuLabel: "Moderate" };
+      return {
+        status: "WARNING",
+        cpuLabel: "Moderate"
+      };
 
     case "Overheating":
     case "Disk_Failure":
     case "Power_Issue":
-      return { status: "CRITICAL", cpuLabel: "Critical" };
+      return {
+        status: "CRITICAL",
+        cpuLabel: "Critical"
+      };
 
     default:
-      return { status: "HEALTHY", cpuLabel: "Good" };
+      return {
+        status: "HEALTHY",
+        cpuLabel: "Good"
+      };
   }
 }
 
 export const getEmployeeDeviceHealth = async (req, res) => {
+
   try {
+
     const { euid } = req.params;
 
     const assetQuery = `
@@ -39,23 +60,28 @@ export const getEmployeeDeviceHealth = async (req, res) => {
       LIMIT 1
     `;
 
-    const assetResult = await pool.query(assetQuery, [euid]);
+    const assetResult =
+      await pool.query(assetQuery, [euid]);
 
     if (assetResult.rows.length === 0) {
+
       return res.status(404).json({
         message: "No asset assigned"
       });
     }
 
-    const asset_id = assetResult.rows[0].id;
+    const asset_id =
+      assetResult.rows[0].id;
 
     /*
       STATEFUL SIMULATION
     */
 
-    const state = getOrCreateState(asset_id);
+    const state =
+      getOrCreateState(asset_id);
 
-    const telemetry = evolveState(state);
+    const telemetry =
+      evolveState(state);
 
     /*
       ML PREDICTION
@@ -64,19 +90,27 @@ export const getEmployeeDeviceHealth = async (req, res) => {
     let predictedLabel = "Normal";
 
     try {
+
       predictedLabel =
         await predictWithModel(telemetry);
+
     } catch (err) {
-      console.error("ML prediction fallback:", err);
+
+      console.error(
+        "ML prediction fallback:",
+        err
+      );
     }
 
     /*
       UI MAPPING
     */
 
-    const mapped = mapToUI(predictedLabel);
+    const mapped =
+      mapToUI(predictedLabel);
 
     const result = {
+
       asset_id,
 
       battery: Math.round(
@@ -101,6 +135,7 @@ export const getEmployeeDeviceHealth = async (req, res) => {
     */
 
     res.json({
+
       id: asset_id,
 
       battery: result.battery,
@@ -117,10 +152,31 @@ export const getEmployeeDeviceHealth = async (req, res) => {
     });
 
   } catch (err) {
+
     console.error(err);
 
     res.status(500).json({
       message: "Prediction failed"
+    });
+  }
+};
+
+export const getAllDevicesHealth = async (req, res) => {
+
+  try {
+
+    const devices =
+      await getAllDeviceHealth();
+
+    res.json(devices);
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      message:
+        "Failed to fetch fleet device health"
     });
   }
 };
