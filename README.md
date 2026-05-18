@@ -94,14 +94,6 @@ npm run dev
 3. **Employee triggers presence events** (e.g., entering/exiting office).
 4. **Attendance is automatically recorded** and visible on the dashboard.
 
-
-##  Future Improvements
-
-- **Device Health Engine**: Integrate AI/ML for device health monitoring.
-- **RFID Integration**: Real hardware event ingestion.
-- **Production Hardening**: Input validation, error handling, and security.
-
-
 **To get started:**
 
 1. Fork the repo and clone your copy
