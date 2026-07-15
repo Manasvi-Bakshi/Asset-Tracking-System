@@ -37,9 +37,7 @@ Backend routes
 PostgreSQL (raw SQL)
 ```
 
----
-
-## ⚙️ Setup & Installation
+##  Setup & Installation
 
 ### Prerequisites
 
