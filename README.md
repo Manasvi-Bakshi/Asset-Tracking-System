@@ -1,101 +1,140 @@
-# Asset Tracking System
+# LaptopHub
 
-A modern, event-driven **Asset Management System** for enterprises, featuring real-time asset assignment, employee attendance tracking, and robust data integration. Built as a full-stack monorepo with a clean separation of backend and frontend, this project is designed for extensibility, learning, and real-world use.
+LaptopHub is a full-stack enterprise laptop management platform that helps organizations manage company laptops throughout their lifecycle. It combines laptop inventory, employee assignments, attendance inference, device health monitoring, and role-based access control into a single application.
+
+Built with React, Node.js, Express, PostgreSQL, and machine learning, the project follows a layered architecture that separates the frontend, backend, and database for easier maintenance and future expansion.
+
+---
+
+## Features
+
+- Laptop inventory and lifecycle management
+- Employee laptop assignment tracking
+- Attendance inference using laptop presence events
+- Device health monitoring with machine learning
+- Bulk laptop and employee onboarding through Excel
+- Role-based access control (RBAC)
+- Location-aware office monitoring
+- Interactive dashboards for administrators and employees
 
 
-##  Overview
+## How It Works
 
-- **Event-driven attendance engine**: Attendance is automatically created and updated based on device presence events (ENTER/EXIT).
-- **Asset assignment tracking**: Assign assets to employees and view real-time status.
-- **Admin & Employee dashboards**: Role-based UI for managing and viewing assets, attendance, and assignments.
-- **Relational database**: Clean PostgreSQL schema with enforced relationships.
-- **Separation of concerns**: Backend owns business logic; frontend is a pure data consumer.
-- **Extensible architecture**: Designed for easy addition of features like device health, geofencing, and authentication.
+### Workflow
 
+1. An administrator imports employee and laptop data or assigns laptops manually.
+2. Employees use their assigned laptops during the workday.
+3. Laptop presence events are recorded whenever a device enters or leaves the office.
+4. The backend processes these events to:
+   - update laptop activity
+   - infer employee attendance
+   - calculate work duration
+5. Device health predictions are generated and displayed alongside laptop information.
+6. Dashboards provide administrators with a real-time view of laptops, attendance, assignments, and device health.
 
-##  How It Works
+### Architecture
 
-### High-Level Workflow
-
-1. **Admin assigns assets** to employees via the dashboard.
-2. **Employees check in/out** by triggering presence events (e.g., via RFID, GPS, or manual action).
-3. **Backend processes events**:
-    - Stores raw events in `asset_presence_events`
-    - Derives daily attendance in `attendance_daily`
-    - Calculates durations and status automatically
-4. **Frontend dashboards** display real-time data for admins and employees.
-
-### Data Flow
-
+```text
+React Frontend
+        │
+REST API (Express.js)
+        │
+Business Logic & Services
+        │
+Repository Layer
+        │
+PostgreSQL Database
+        │
+Machine Learning Module
 ```
-Frontend (React) 
-   ↓
-API calls (Express)
-   ↓
-Backend routes
-   ↓
-PostgreSQL (raw SQL)
-```
 
-##  Setup & Installation
+---
+
+## Tech Stack
+
+### Frontend
+- React
+
+### Backend
+- Node.js
+- Express.js
+
+### Database
+- PostgreSQL
+
+### Machine Learning
+- Python
+- Scikit-learn
+
+---
+
+## Getting Started
 
 ### Prerequisites
 
-- **Node.js** v22+ (for backend and frontend)
-- **PostgreSQL** (running locally or remotely)
-- **npm** (Node package manager)
+- Node.js (v22 or later)
+- PostgreSQL
+- npm
 
-### 1. Clone the Repository
+### Clone the Repository
 
 ```bash
-git clone (this repo)
-cd Asset-Managment
+git clone <repository-url>
+cd LaptopHub
 ```
 
-### 2. Backend Setup
+### Backend
 
-Configure your database connection in backend/.env
-- DB_HOST=localhost
-- DB_USER=postgres
-- DB_PASSWORD=yourpassword
-- DB_NAME=iris_db
+Create a `.env` file inside the `backend` directory.
+
+```env
+DB_HOST=localhost
+DB_USER=postgres
+DB_PASSWORD=yourpassword
+DB_NAME=iris_db
+```
+
+Install dependencies and start the server.
 
 ```bash
 cd backend
 npm install
 npm start
-# Backend runs on http://localhost:5000
 ```
 
-### 3. Frontend Setup
+Backend runs at:
+
+```
+http://localhost:5000
+```
+
+### Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
-# Frontend runs on http://localhost:3000
 ```
 
-### 4. Database Setup
+Frontend runs at:
 
-- Ensure your PostgreSQL instance is running.
-- Create the required tables as described in `DB_Setup.md`.
-- Tables used: `employees`, `assets`, `asset_assignments`, `attendance_daily`, `asset_presence_events`, `locations`, `roles`, `permissions`, `role_permissions`,`device_health`.
+```
+http://localhost:3000
+```
 
+### Database
 
-##  Usage
+Create the database and tables using the SQL scripts provided in `DB_Setup.md`.
 
-### Example Workflow
+Core tables include:
 
-1. **Admin logs in** and assigns assets to employees.
-2. **Employee logs in** (using their EUID, e.g., `EMP001`).
-3. **Employee triggers presence events** (e.g., entering/exiting office).
-4. **Attendance is automatically recorded** and visible on the dashboard.
-
-**To get started:**
-
-1. Fork the repo and clone your copy
-2. Set up your environment as described above
-3. Open an issue or pull request with your changes
-
-**Let’s build something great together!**
+- employees
+- laptops (stored as `assets`)
+- asset_assignments
+- attendance_daily
+- asset_presence_events
+- device_health
+- locations
+- roles
+- permissions
+- role_permissions
